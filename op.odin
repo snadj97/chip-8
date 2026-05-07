@@ -2,6 +2,83 @@ package main
 
 import "core:mem"
 
+Chip8Func :: proc(_: ^Chip8)
+
+chip8_op_table_setup :: proc(chip: ^Chip8) {
+    using chip
+
+    table[0x0] = chip8_table0
+    table[0x1] = chip8_op_JMP_nnn
+    table[0x2] = chip8_op_CALL_nnn
+    table[0x3] = chip8_op_SE_xkk
+    table[0x4] = chip8_op_SNE_xkk
+    table[0x5] = chip8_op_SE_xy
+    table[0x6] = chip8_op_LD_xkk
+    table[0x7] = chip8_op_ADD_xkk
+    table[0x8] = chip8_table8
+    table[0x9] = chip8_op_SNE_xy
+    table[0xA] = chip8_op_LDI_nnn
+    table[0xB] = chip8_op_JPV0_nnn
+    table[0xC] = chip8_op_RND_xkk
+    table[0xD] = chip8_op_DRW_xy
+    table[0xE] = chip8_tableE
+    table[0xF] = chip8_tableF
+
+    for i := 0; i <= 0xE; i += 1 {
+        table0[i] = chip8_op_NOP
+        table8[i] = chip8_op_NOP
+        tableE[i] = chip8_op_NOP
+    }
+
+    table0[0x0] = chip8_op_CLS
+    table0[0xE] = chip8_op_RET
+
+    table8[0x0] = chip8_op_LD_xy
+    table8[0x1] = chip8_op_OR_xy
+    table8[0x2] = chip8_op_AND_xy
+    table8[0x3] = chip8_op_XOR_xy
+    table8[0x4] = chip8_op_ADD_xy
+    table8[0x5] = chip8_op_SUB_xy
+    table8[0x6] = chip8_op_SHR_x
+    table8[0x7] = chip8_op_SUBN_xy
+    table8[0xE] = chip8_op_SHL_x
+
+    tableE[0x1] = chip8_op_SKNP_x
+    tableE[0xE] = chip8_op_SKP_x
+
+    for i := 0; i <= 0x65; i += 1 {
+        tableF[i] = chip8_op_NOP
+    }
+
+    tableF[0x07] = chip8_op_LD_x_DT
+    tableF[0x0A] = chip8_op_LDK_x
+    tableF[0x15] = chip8_op_LDDT_x
+    tableF[0x18] = chip8_op_LDST_x
+    tableF[0x1E] = chip8_op_ADDI_x
+    tableF[0x29] = chip8_op_LDF_x
+    tableF[0x33] = chip8_op_LDB_x
+    tableF[0x55] = chip8_op_LDI_0x
+    tableF[0x65] = chip8_op_LD_0x_I
+}
+
+chip8_table0 :: proc(chip: ^Chip8) {
+    chip.table0[chip.opcode & 0x000F](chip)
+}
+
+chip8_table8 :: proc(chip: ^Chip8) {
+    chip.table8[chip.opcode & 0x000F](chip)
+}
+
+chip8_tableE :: proc(chip: ^Chip8) {
+    chip.tableE[chip.opcode & 0x000F](chip)
+}
+
+chip8_tableF :: proc(chip: ^Chip8) {
+    chip.tableF[chip.opcode & 0x00FF](chip)
+}
+
+chip8_op_NOP :: proc(_: ^Chip8) {}
+
 // Clear screen
 // Opcode: $00E0
 // Set video memory to 0
@@ -444,6 +521,10 @@ chip8_op_LDI_0x :: proc(chip: ^Chip8) {
     }
 }
 
+// Load to Registers from Memory
+// Opcode: $Fx65
+// Load memory from location stored in index register
+// into registers 0 through x
 chip8_op_LD_0x_I :: proc(chip: ^Chip8) {
     using chip
 
