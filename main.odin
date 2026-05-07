@@ -89,6 +89,19 @@ chip8_random_u8 :: proc(chip: ^Chip8) -> u8 {
     return cast(u8)rand.int_max(255, chip._rng)
 }
 
+chip8_cycle :: proc(chip: ^Chip8) {
+    using chip
+
+    opcode = u16((memory[pc] << 8) | memory[pc + 1])
+
+    pc += 2
+
+    table[(opcode & 0xF000) >> 12](chip)
+
+    if delayTimer > 0 do delayTimer -= 1
+    if soundTimer > 0 do soundTimer -= 1
+}
+
 main :: proc() {
     fmt.println("Hellope!")
 }
