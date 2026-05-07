@@ -1,9 +1,11 @@
 package main
 
+import "core:c"
 import "core:fmt"
 import "core:math/rand"
 import "core:mem"
 import "core:os"
+import "core:strconv"
 import "core:time"
 
 MEM_SIZE :: 4096
@@ -39,23 +41,23 @@ font_set : [FONT_SET_SIZE]u8 = {
 //odinfmt:enable
 
 Chip8 :: struct {
-    registers:  [16]u8,
-    memory:     [MEM_SIZE]u8,
-    index:      u16,
-    pc:         u16,
-    stack:      [16]u16,
-    sp:         u8,
-    delayTimer: u8,
-    soundTimer: u8,
-    keypad:     [KEYPAD_SIZE]u8,
-    video:      [VIDEO_WIDTH * VIDEO_HEIGHT]u32,
-    opcode:     u16,
-    table:      [0xF + 1]Chip8Func,
-    table0:     [0xE + 1]Chip8Func,
-    table8:     [0xE + 1]Chip8Func,
-    tableE:     [0xE + 1]Chip8Func,
-    tableF:     [0x65 + 1]Chip8Func,
-    _rng:       rand.Generator,
+    registers:   [16]u8,
+    memory:      [MEM_SIZE]u8,
+    index:       u16,
+    pc:          u16,
+    stack:       [16]u16,
+    sp:          u8,
+    delay_timer: u8,
+    sound_timer: u8,
+    keypad:      [KEYPAD_SIZE]u8,
+    video:       [VIDEO_WIDTH * VIDEO_HEIGHT]u32,
+    opcode:      u16,
+    table:       [0xF + 1]Chip8Func,
+    table0:      [0xE + 1]Chip8Func,
+    table8:      [0xE + 1]Chip8Func,
+    tableE:      [0xE + 1]Chip8Func,
+    tableF:      [0x65 + 1]Chip8Func,
+    _rng:        rand.Generator,
 }
 
 chip8_new :: proc() -> (chip: Chip8) {
@@ -80,7 +82,7 @@ chip8_load_rom :: proc(fname: string, chip: ^Chip8) -> int {
         return -2
     }
 
-    mem.copy(&chip.memory[PROGRAM_START_ADDRESS], &data, len(data))
+    mem.copy(&chip.memory[PROGRAM_START_ADDRESS], raw_data(data), len(data))
 
     return 0
 }
@@ -92,17 +94,68 @@ chip8_random_u8 :: proc(chip: ^Chip8) -> u8 {
 chip8_cycle :: proc(chip: ^Chip8) {
     using chip
 
-    opcode = u16((memory[pc] << 8) | memory[pc + 1])
+    opcode = (u16(memory[pc]) << 8) | u16(memory[pc + 1])
 
     pc += 2
 
     table[(opcode & 0xF000) >> 12](chip)
 
-    if delayTimer > 0 do delayTimer -= 1
-    if soundTimer > 0 do soundTimer -= 1
+    if delay_timer > 0 do delay_timer -= 1
+    if sound_timer > 0 do sound_timer -= 1
 }
 
 main :: proc() {
-    fmt.println("Hellope!")
+    args := os.args
+
+    if len(args) < 4 {
+        fmt.printfln("Usage: %v <Scale> <Delay> <ROM>", args[0])
+        os.exit(1)
+    }
+
+    video_scale, ok := strconv.parse_int(args[1])
+    if !ok {
+        fmt.eprintfln("Invalid scale: %v", args[1])
+        os.exit(1)
+    }
+
+    cycle_delay: int
+    cycle_delay, ok = strconv.parse_int(args[2])
+    if !ok {
+        fmt.eprintfln("Invalid delay: %v", args[2])
+        os.exit(1)
+    }
+
+    rom_fname := args[3]
+
+    platform_init(
+        "CHIP-8 Emulator",
+        c.int(VIDEO_WIDTH * video_scale),
+        c.int(VIDEO_HEIGHT * video_scale),
+        VIDEO_WIDTH,
+        VIDEO_HEIGHT,
+    )
+
+    chip8 := chip8_new()
+    chip8_load_rom(rom_fname, &chip8)
+
+    video_pitch := size_of(chip8.video[0]) * VIDEO_WIDTH
+
+    last_cycle_time := time.now()
+    quit := false
+
+    for !quit {
+        quit = platform_process_input(chip8.keypad[:])
+
+        current_time := time.now()
+        dt := time.diff(last_cycle_time, current_time)
+
+        if int(time.duration_milliseconds(dt)) > cycle_delay {
+            last_cycle_time = current_time
+            chip8_cycle(&chip8)
+            platform_update(&chip8.video, c.int(video_pitch))
+        }
+    }
+
+    os.exit(0)
 }
 

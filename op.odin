@@ -426,7 +426,7 @@ chip8_op_LD_x_DT :: proc(chip: ^Chip8) {
     using chip
     vx := u8((opcode & 0x0F00) >> 8)
 
-    registers[vx] = delayTimer
+    registers[vx] = delay_timer
 }
 
 // Wait Keypress and Store
@@ -454,7 +454,7 @@ chip8_op_LDDT_x :: proc(chip: ^Chip8) {
     using chip
     vx := u8((opcode & 0x0F00) >> 8)
 
-    delayTimer = registers[vx]
+    delay_timer = registers[vx]
 }
 
 // Load Sound Timer
@@ -464,7 +464,7 @@ chip8_op_LDST_x :: proc(chip: ^Chip8) {
     using chip
     vx := u8((opcode & 0x0F00) >> 8)
 
-    soundTimer = registers[vx]
+    sound_timer = registers[vx]
 }
 
 // Add Index
