@@ -365,10 +365,10 @@ chip8_op_DRW_xy :: proc(chip: ^Chip8) {
     using chip
     vx := u8((opcode & 0x0F00) >> 8)
     vy := u8((opcode & 0x00F0) >> 4)
-    height := u16(opcode & 0x000F) // Cast to u16 for comparison in loop
+    height := opcode & 0x000F // Cast to u16 for comparison in loop
 
-    xPos := registers[vx] & VIDEO_WIDTH
-    yPos := registers[vy] & VIDEO_HEIGHT
+    xPos := registers[vx] % VIDEO_WIDTH
+    yPos := registers[vy] % VIDEO_HEIGHT
 
     registers[0xF] = 0
 
