@@ -377,7 +377,7 @@ chip8_op_DRW_xy :: proc(chip: ^Chip8) {
 
         for col: u16 = 0; col < 8; col += 1 {
             spritePixel := spriteByte & (0x80 >> col)
-            screenPixel := &video[(u16(yPos) + row) * VIDEO_WIDTH + (u16(xPos) + col)]
+            screenPixel := &video[((u16(yPos) + row) % VIDEO_HEIGHT) * VIDEO_WIDTH + ((u16(xPos) + col) % VIDEO_WIDTH)]
 
             if 0 != spritePixel {
                 if screenPixel^ == 0xFFFFFFFF {
