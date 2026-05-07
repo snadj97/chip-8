@@ -136,7 +136,11 @@ main :: proc() {
     )
 
     chip8 := chip8_new()
-    chip8_load_rom(rom_fname, &chip8)
+    err := chip8_load_rom(rom_fname, &chip8)
+    if err < 0 {
+        fmt.eprintf("Failed to load ROM (err: %v)", err)
+        os.exit(err)
+    }
 
     video_pitch := size_of(chip8.video[0]) * VIDEO_WIDTH
 
