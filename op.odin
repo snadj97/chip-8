@@ -85,7 +85,7 @@ chip8_op_NOP :: proc(_: ^Chip8) {}
 chip8_op_CLS :: proc(chip: ^Chip8) {
     using chip
 
-    mem.set(&video, 0, len(video))
+    mem.set(&video, 0, len(video) * size_of(u32))
 }
 
 // Return
@@ -127,7 +127,7 @@ chip8_op_CALL_nnn :: proc(chip: ^Chip8) {
 chip8_op_SE_xkk :: proc(chip: ^Chip8) {
     using chip
     vx := (opcode & 0x0F00) >> 8
-    kk := u8(opcode) & 0x00FF
+    kk := u8(opcode & 0x00FF)
 
     if registers[vx] == kk {
         pc += 2
@@ -142,7 +142,7 @@ chip8_op_SE_xkk :: proc(chip: ^Chip8) {
 chip8_op_SNE_xkk :: proc(chip: ^Chip8) {
     using chip
     vx := (opcode & 0x0F00) >> 8
-    kk := u8(opcode) & 0x00FF
+    kk := u8(opcode & 0x00FF)
 
     if registers[vx] != kk {
         pc += 2
@@ -365,25 +365,25 @@ chip8_op_DRW_xy :: proc(chip: ^Chip8) {
     using chip
     vx := u8((opcode & 0x0F00) >> 8)
     vy := u8((opcode & 0x00F0) >> 4)
-    height := opcode & 0x000F // Cast to u16 for comparison in loop
+    height := opcode & 0x000F
 
     xPos := registers[vx] % VIDEO_WIDTH
     yPos := registers[vy] % VIDEO_HEIGHT
 
     registers[0xF] = 0
 
-    for row: u16 = 0; row < height; row += 1 {
+    outer: for row: u16 = 0; row < height; row += 1 {
         spriteByte := memory[index + row]
 
         for col: u16 = 0; col < 8; col += 1 {
-            spritePixel := spriteByte & (0x80 >> col)
-            screenPixel := &video[((u16(yPos) + row) % VIDEO_HEIGHT) * VIDEO_WIDTH + ((u16(xPos) + col) % VIDEO_WIDTH)]
+            if (u16(yPos) + row) >= VIDEO_HEIGHT || (u16(xPos) + col) >= VIDEO_WIDTH do break outer
 
-            if 0 != spritePixel {
+            screenPixel := &video[(u16(yPos) + row) * VIDEO_WIDTH + (u16(xPos) + col)]
+
+            if 0 != spriteByte & (0x80 >> col) {
                 if screenPixel^ == 0xFFFFFFFF {
                     registers[0xF] = 1
                 }
-
                 screenPixel^ ~= 0xFFFFFFFF
             }
         }
@@ -473,6 +473,12 @@ chip8_op_LDST_x :: proc(chip: ^Chip8) {
 chip8_op_ADDI_x :: proc(chip: ^Chip8) {
     using chip
     vx := u8((opcode & 0x0F00) >> 8)
+
+    if index + u16(registers[vx]) > 0xFFF {
+        registers[0xF] = 1
+    } else {
+        registers[0xF] = 0
+    }
 
     index += u16(registers[vx])
 }

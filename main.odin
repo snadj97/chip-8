@@ -57,15 +57,11 @@ Chip8 :: struct {
     table8:      [0xE + 1]Chip8Func,
     tableE:      [0xE + 1]Chip8Func,
     tableF:      [0x65 + 1]Chip8Func,
-    _rng:        rand.Generator,
 }
 
 chip8_new :: proc() -> (chip: Chip8) {
     chip.pc = PROGRAM_START_ADDRESS
     mem.copy(&chip.memory[FONT_SET_START_ADDRESS], &font_set, FONT_SET_SIZE)
-    rng_state := rand.create(cast(u64)time.to_unix_seconds(time.now()))
-    chip._rng = rand.default_random_generator(&rng_state)
-
     chip8_op_table_setup(&chip)
 
     return
@@ -88,7 +84,7 @@ chip8_load_rom :: proc(fname: string, chip: ^Chip8) -> int {
 }
 
 chip8_random_u8 :: proc(chip: ^Chip8) -> u8 {
-    return cast(u8)rand.int_max(255, chip._rng)
+    return cast(u8)rand.int_max(256)
 }
 
 chip8_cycle :: proc(chip: ^Chip8) {
